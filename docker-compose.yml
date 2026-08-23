@@ -1,54 +1,38 @@
 services:
   postgres:
-    image: postgres:15
-    container_name: postgres_msbd
-    restart: always
+    image: postgres:17
+    container_name: msbd-pg
     environment:
       POSTGRES_USER: msbd
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: msbd2026
       POSTGRES_DB: latihan
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+      - ./dump:/dump
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U msbd -d latihan"]
+      test: ["CMD-SHELL", "pg_isready -U msbd"]
       interval: 10s
-      timeout: 5s
       retries: 5
 
   mongo:
-    image: mongo:6
-    container_name: mongo_msbd
-    restart: always
+    image: mongo:8
+    container_name: msbd-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: msbd
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_ROOT_PASSWORD: msbd2026
     ports:
       - "27017:27017"
     volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - mongodata:/data/db
 
   redis:
-    image: redis:7
-    container_name: redis_msbd
-    restart: always
+    image: redis:7-alpine
+    container_name: msbd-redis
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
-  postgres_data:
-  mongo_data:
-  redis_data:
+  pgdata:
+  mongodata:
