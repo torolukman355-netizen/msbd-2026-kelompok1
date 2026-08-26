@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # LANGKAH-LANGKAH PRAKTIKUM P01
 
 ## 1. Memverifikasi Docker

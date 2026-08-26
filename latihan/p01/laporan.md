@@ -1,6 +1,5 @@
 # LAPORAN LATIHAN P01
 
-<<<<<<< HEAD
 ## DOCKER
 
 > **Mata Kuliah:** Manajemen Sistem Basis Data
@@ -22,7 +21,7 @@
 
 ---
 
-# 1. HASIL PRAKTIKUM DOCKER
+# 1. HASIL DOCKER
 
 ## 1.1 Versi Docker
 
