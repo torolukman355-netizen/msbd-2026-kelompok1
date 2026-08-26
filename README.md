@@ -10,15 +10,9 @@
 
 <br><br>
 
-<<<<<<< HEAD
 # MSBD - Kelompok 1
 
 **Repository Tugas**
-=======
-# MSBD — Kelompok 1
-
-**Repository Tugas & Praktikum**
->>>>>>> 1153cc9e225c0095ffe4cf9f84cac8abe6542dc4
 
 Manajemen Sistem Basis Data
 
