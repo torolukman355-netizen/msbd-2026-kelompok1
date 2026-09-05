@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: msbd
       POSTGRES_PASSWORD: msbd2026
-      POSTGRES_DB: latihan
+      POSTGRES_DB: proyek_dev
     ports:
       - "5432:5432"
     volumes:
@@ -36,17 +36,16 @@ services:
   flyway:
     image: flyway/flyway:11
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/proyek_dev
+      FLYWAY_USER: msbd
+      FLYWAY_PASSWORD: msbd2026
+      FLYWAY_CONNECT_RETRIES: 10
     volumes:
       - ./latihan/p02/migrations:/flyway/sql
-    command: >
-      -url=jdbc:postgresql://postgres:5432/proyek_dev
-      -user=msbd
-      -password=msbd2026
-      -connectRetries=10
-      migrate
-      
+    command: migrate
+    
 volumes:
   pgdata:
   mongodata:
