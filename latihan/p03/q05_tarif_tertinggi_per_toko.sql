@@ -1,3 +1,7 @@
+-- Diminta: untuk setiap toko, judul film dengan tarif sewa tertinggi di toko tersebut, tanpa window function.
+-- Dipilih: subquery berkorelasi dengan MAX karena perlu membandingkan tarif tiap film dengan nilai maksimum khusus di tokonya masing-masing.
+-- Alternatif: window function (RANK/MAX OVER PARTITION BY store_id); tidak dipilih karena soal secara eksplisit meminta penyelesaian tanpa window function.
+
 SELECT DISTINCT
     s.store_id,
     f.title,

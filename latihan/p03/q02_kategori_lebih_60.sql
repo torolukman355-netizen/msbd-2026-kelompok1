@@ -1,6 +1,7 @@
--- ============================================
--- Q2: Kategori dengan lebih dari 60 film
--- ============================================
+-- Diminta: nama kategori beserta jumlah filmnya, hanya kategori yang punya lebih dari 60 film.
+-- Dipilih: HAVING karena filter dilakukan langsung setelah agregasi GROUP BY, lebih ringkas untuk kasus sederhana ini.
+-- Alternatif: derived table di FROM; tidak dipilih sebagai versi utama karena menambah lapisan subquery yang tidak diperlukan di kasus ini (tetap disertakan untuk perbandingan keterbacaan).
+
 
 -- Versi 1: pakai HAVING
 SELECT

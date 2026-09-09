@@ -1,6 +1,6 @@
--- ============================================
--- Q4: Film yang tidak pernah disewa
--- ============================================
+-- Diminta: judul film yang tidak pernah disewa, ditulis dalam dua versi (NOT IN dan NOT EXISTS) untuk dibandingkan.
+-- Dipilih: NOT EXISTS sebagai versi yang lebih aman karena tidak terpengaruh nilai NULL di subquery.
+-- Alternatif: NOT IN; tetap disertakan untuk perbandingan, tetapi berisiko jika kolom yang dibandingkan mengandung NULL.
 
 -- Versi 1: pakai NOT IN
 SELECT title
