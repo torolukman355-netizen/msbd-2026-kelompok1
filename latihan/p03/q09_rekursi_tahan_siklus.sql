@@ -1,3 +1,7 @@
+-- Diminta: Menampilkan hierarki pegawai yang tahan terhadap infinite loop/siklus data.
+-- Dipilih: Recursive CTE dengan klausa CYCLE (fitur standar PostgreSQL 14+) karena sintaksnya bersih dan otomatis menghentikan siklus.
+-- Alternatif: Menggunakan array jalur dan syarat NOT (pegawai_id = ANY(path)); tidak dipilih karena klausa CYCLE lebih terstandarisasi.
+
 WITH RECURSIVE hierarki_aman AS (
     -- Anchor member
     SELECT 

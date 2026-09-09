@@ -1,3 +1,7 @@
+-- Diminta: Menampilkan nama kategori, jumlah film (> 60 film), dan rata-rata tarif sewa per kategori.
+-- Dipilih: Dua CTE berurutan (kategori_besar dan rata_rata_kategori) karena membuat alur logika pemrosesan modular dan mudah dibaca.
+-- Alternatif: GROUP BY biasa dengan HAVING dan agregatAVG; tidak dipilih karena soal meminta latihan manipulasi rantai CTE.
+
 WITH kategori_besar AS (
     SELECT 
         c.category_id,

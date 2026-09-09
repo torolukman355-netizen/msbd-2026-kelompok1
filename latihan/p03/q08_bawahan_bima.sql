@@ -1,3 +1,7 @@
+-- Diminta: Menampilkan semua bawahan langsung maupun tidak langsung dari pegawai bernama Bima beserta jaraknya.
+-- Dipilih: Recursive CTE dengan anchor disaring khusus pada Bima (level 0), agar penelusuran hierarki dimulai dari Bima ke bawah.
+-- Alternatif: Penelusuran dari root lalu di-WHERE; tidak dipilih karena kurang efisien memproses seluruh pohon organisasi.
+
 WITH RECURSIVE bawahan_bima AS (
     SELECT 
         pegawai_id,

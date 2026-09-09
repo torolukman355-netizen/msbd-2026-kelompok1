@@ -1,3 +1,7 @@
+-- Diminta: Menampilkan seluruh pegawai beserta level kedalaman dan jalur jabatan (path) dari puncak.
+-- Dipilih: Recursive CTE (WITH RECURSIVE) karena data berstruktur pohon/hierarki dengan kedalaman tak terbatas.
+-- Alternatif: Multiple SELF JOIN; tidak dipilih karena fleksibilitasnya terbatas pada kedalaman hierarki yang tetap.
+
 WITH RECURSIVE hierarki_pegawai AS (
     SELECT 
         pegawai_id,
