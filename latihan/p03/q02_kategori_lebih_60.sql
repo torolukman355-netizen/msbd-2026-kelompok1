@@ -24,14 +24,3 @@ FROM (
     GROUP BY c.name
 ) AS kategori_count
 WHERE jumlah_film > 60;
-
--- ============================================
--- Perbandingan keterbacaan:
--- Versi HAVING lebih ringkas (satu query, tanpa nested)
--- karena HAVING memang dirancang buat filter setelah GROUP BY.
--- Versi derived table lebih panjang dan butuh subquery + alias,
--- tapi lebih fleksibel kalau nanti filter-nya makin kompleks
--- (misal butuh filter tambahan yang bukan hasil agregasi,
--- atau mau reuse hasil agregasi itu di beberapa tempat).
--- Untuk kasus sederhana seperti ini, HAVING lebih terbaca.
--- ============================================
