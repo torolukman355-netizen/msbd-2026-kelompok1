@@ -3,13 +3,12 @@
 
 | Nama | NIM | Kontribusi | Commit |
 |---|---|---|---|
-| Muhammad Lukman Toro | `251402105` | Project Manager; langkah 6 dan 7 | `017fc5b` |
-| Khairunnisa | `251402017` | Langkah 3 | Commit langkah 3: `[isi hash]` |
-| Rumaisha Raghib Syahidah Siregar | `251402034` | Langkah 4 | `8703612` |
-| Muhammad Ihsan Anwar | `251402044` | Langkah 1 dan 2 | `fe292cf` |
-| Randi Abdiansyah | `251402138` | Langkah 5 | `a829639` |
+| Muhammad Lukman Toro | `251402105` | Project Manager; langkah 6 dan 7 |  langkah 6 dan 7 |
+| Khairunnisa | `251402017` | Langkah 3 |langkah 3: |
+| Rumaisha Raghib Syahidah Siregar | `251402034` | Langkah 4 | langkah 4 |
+| Muhammad Ihsan Anwar | `251402044` | Langkah 1 dan 2 | Langkah 1 dan 2 |
+| Randi Abdiansyah | `251402138` | Langkah 5 | Langkah 5 |
 
-Hash `[isi hash]` harus dilengkapi dari `git log` bila commit tersebut belum ada di branch ini.
 
 ## Q1–Q21
 
@@ -306,7 +305,7 @@ migrations/
 └── 0046_contract_drop_kolom_lama.down.sql
 ```
 
-**Tangkapan layar struktur:** `[tempelkan gambar: latihan/p04/struktur_migrations.png]`
+**Tangkapan layar struktur:** `[latihan/p04/struktur_migrations.png]`
 
 
 Commit yang sudah terlihat pada branch ini: `fe292cf` (langkah 1–2), `a829639` (Q5–Q8), `8703612` (langkah 4), dan `017fc5b` (langkah 5/6–7). Hash tersebut bukan commit Q18–Q21 sampai perubahan ini benar-benar di-commit.
