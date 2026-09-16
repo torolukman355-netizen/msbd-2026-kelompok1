@@ -306,7 +306,7 @@ migrations/
 └── 0046_contract_drop_kolom_lama.down.sql
 ```
 
-**Tangkapan layar struktur:** `[tempelkan gambar: bukti/struktur-migrations.png]`
+**Tangkapan layar struktur:** `[tempelkan gambar: latihan/p04/struktur_migrations.png]`
 
 
 Commit yang sudah terlihat pada branch ini: `fe292cf` (langkah 1–2), `a829639` (Q5–Q8), `8703612` (langkah 4), dan `017fc5b` (langkah 5/6–7). Hash tersebut bukan commit Q18–Q21 sampai perubahan ini benar-benar di-commit.
