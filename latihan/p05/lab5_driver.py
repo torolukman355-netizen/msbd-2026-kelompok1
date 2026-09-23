@@ -2,12 +2,13 @@
 # -- Dipilih: Menggunakan psycopg, connection pool, pengelolaan transaksi, dan pemantauan pg_stat_activity.
 # -- Alternatif: Pendekatan manual tanpa pengaman; tidak dipilih karena rentan terhadap error dan SQL injection.
 
+import os
 import time
 import psycopg
 from psycopg import sql
 from psycopg_pool import ConnectionPool
 
-DSN = "dbname=postgres user=msbd password=msbd2026 host=localhost port=5432"
+DSN = os.getenv("DSN", "postgresql://msbd:msbd2026@localhost:5433/pagila")
 
 def q10():
     print("--- Q10: SELECT Berparameter ---")

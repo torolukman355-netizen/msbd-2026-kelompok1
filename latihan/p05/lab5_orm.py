@@ -18,7 +18,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, joinedload, mapped_
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg://msbd:msbd2026@localhost:5432/pagila",
+    "postgresql+psycopg://msbd:msbd2026@localhost:5433/pagila",
 )
 REPORT_PATH = Path(__file__).with_name("lab5_orm_hasil.md")
 

@@ -1,6 +1,8 @@
+import os
+
 import psycopg
 
-DSN = "postgresql://msbd:msbd2026@localhost:5432/pagila"
+DSN = os.getenv("DSN", "postgresql://msbd:msbd2026@localhost:5433/pagila")
 
 with psycopg.connect(DSN) as conn:
     with conn.cursor() as cur:

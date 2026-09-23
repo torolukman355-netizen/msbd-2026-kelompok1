@@ -3,7 +3,7 @@ CREATE SCHEMA lab5;
 
 CREATE TYPE lab5.rental_status AS ENUM ('ACTIVE', 'RETURNED', 'CANCELLED');
 CREATE DOMAIN lab5.positive_amount AS numeric(10,2) CHECK (VALUE > 0);
-
+ 
 CREATE TABLE lab5.rental_tx (
   rental_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   customer_id integer NOT NULL REFERENCES public.customer(customer_id),
