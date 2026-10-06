@@ -1,0 +1,28 @@
+
+-- Q11: REFLEKTIF 
+
+-- Pertanyaan:
+--   Kaitkan urutan daun B-Tree dengan kemampuan optimizer
+--   berhenti mengurutkan hasil.
+--
+-- Jawaban:
+--   B-Tree menyimpan key di level daun (leaf) dalam keadaan
+--   TERURUT SECARA FISIK. Jika urutan kolom index cocok dengan
+--   ORDER BY + filter WHERE, optimizer bisa membaca daun secara
+--   berurutan dan TIDAK PERLU melakukan Sort sama sekali.
+--
+--   - Pada Q9, index (customer_id, terjadi_pada DESC) membuat
+--     PostgreSQL langsung melompat ke customer_id = 4211 di
+--     B-Tree, lalu membaca terjadi_pada dari atas (terbaru) ke
+--     bawah. Hasil langsung terurut DESC -> TANPA Sort.
+--
+--   - Pada Q8, index (terjadi_pada, customer_id) juga tidak
+--     butuh Sort karena ORDER BY terjadi_pada DESC cocok dengan
+--     urutan index. Tapi karena customer_id bukan key pertama,
+--     PostgreSQL harus scan mundur seluruh rentang tanggal dan
+--     memfilter customer_id satu per satu -> biaya baca jauh
+--     lebih besar (3795 buffer vs ratusan).
+--
+--   Kesimpulan:
+--     Urutan kolom index harus disesuaikan dengan pola query:
+--     kolom filter (equality) di DEPAN,kolom ORDER BY di BELAKANG.

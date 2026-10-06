@@ -1,0 +1,6 @@
+Q21 · Reflektif: penghematan ruang BRIN
+
+Pertanyaan : Kapan penghematan ukuran BRIN sepadan dengan selisih waktunya?
+
+Jawaban:
+    Penghematan ukuran BRIN sepadan ketika workload sering menjalankan rentang waktu yang kolomnya tersusun berkorelasi dengan urutan fisik heap, kebutuhan latensinya masih dipenuhi, dan biaya penyimpanan atau cache B-Tree menjadi penting. B-Tree lebih tepat jika pembacaan rentang harus sangat selektif atau latensi rendah lebih penting daripada ukuran index. Keputusan sebaiknya memakai frekuensi query, selisih waktu dan Buffers terukur, ruang yang dihemat, serta biaya pemeliharaan index saat data ditulis. Isi kesimpulan akhir berdasarkan hasil Q19–Q20, bukan hanya ukuran index.
