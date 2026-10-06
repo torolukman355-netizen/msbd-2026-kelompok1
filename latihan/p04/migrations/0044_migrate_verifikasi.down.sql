@@ -1,1 +1,0 @@
--- Verifikasi tidak mengubah data; tidak ada rollback yang diperlukan.

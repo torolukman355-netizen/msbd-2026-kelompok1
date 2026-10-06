@@ -1,9 +1,0 @@
-Q31. Reflektif
-
-Setiap keputusan penghapusan atau pemeliharaan index didasarkan pada satu angka pengukuran utama:
-1. Nilai `idx_scan` (menunjukkan seberapa sering index tersebut benar-benar diakses oleh mesin query PostgreSQL).
-2. Nilai `pg_relation_size` (menunjukkan besarnya ukuran byte yang dikonsumsi index tersebut pada disk).
- 
-Kesimpulan Reflektif:
-Pembuatan index tidak boleh dilakukan secara sembarangan. Setiap index tambahan harus selalu ditimbang 
-antara keuntungan kecepatan baca (Read) terhadap kerugian penurunan kecepatan tulis (Write Overhead).
