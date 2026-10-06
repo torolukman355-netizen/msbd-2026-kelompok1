@@ -1,0 +1,32 @@
+-- ============================================================
+-- Q16: REFLEKTIF (Jawaban di laporan.md, bukan di SQL)
+-- ============================================================
+-- Pertanyaan:
+--   Mengapa Heap Fetches berubah setelah VACUUM walaupun
+--   definisi index tidak berubah?
+--
+-- Jawaban:
+--   Heap Fetches terjadi karena PostgreSQL perlu MEMVERIFIKASI
+--   VISIBILITAS baris (apakah baris masih hidup atau sudah
+--   dihapus/diupdate). Informasi ini tidak disimpan di index,
+--   tapi di VISIBILITY MAP -- sebuah bitmap di heap yang
+--   menandai halaman mana yang semua barisnya "all-visible".
+--
+--   Sebelum VACUUM:
+--     - Visibility Map belum diupdate setelah ada UPDATE/DELETE.
+--     - PostgreSQL tidak yakin apakah baris di index masih valid.
+--     - Setiap entry index harus FETCH KE HEAP untuk cek visibilitas.
+--     - Heap Fetches = TINGGI.
+--
+--   Sesudah VACUUM:
+--     - VACUUM membersihkan baris mati dan MENGUPDATE Visibility Map.
+--     - Halaman yang semua barisnya visible ditandai "all-visible".
+--     - PostgreSQL bisa PERCAYA PADA INDEX SAJA tanpa fetch ke heap.
+--     - Heap Fetches = 0 atau sangat rendah.
+--
+--   Kesimpulan:
+--     Definisi index tidak berubah, tapi METADATA VISIBILITAS
+--     di heap berubah karena VACUUM. Itulah kenapa Heap Fetches
+--     turun -- bukan karena index berubah, tapi karena PostgreSQL
+--     jadi lebih percaya pada index.
+-- ============================================================
