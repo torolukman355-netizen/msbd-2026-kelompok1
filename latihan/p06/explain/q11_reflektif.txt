@@ -1,6 +1,6 @@
--- ============================================================
--- Q11: REFLEKTIF (Jawaban di laporan.md, bukan di SQL)
--- ============================================================
+
+-- Q11: REFLEKTIF 
+
 -- Pertanyaan:
 --   Kaitkan urutan daun B-Tree dengan kemampuan optimizer
 --   berhenti mengurutkan hasil.
@@ -25,6 +25,4 @@
 --
 --   Kesimpulan:
 --     Urutan kolom index harus disesuaikan dengan pola query:
---     kolom filter (equality) di DEPAN,
---     kolom ORDER BY di BELAKANG.
--- ============================================================
+--     kolom filter (equality) di DEPAN,kolom ORDER BY di BELAKANG.

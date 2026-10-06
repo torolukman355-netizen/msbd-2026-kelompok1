@@ -1,5 +1,5 @@
 -- ============================================================
--- Q16: REFLEKTIF (Jawaban di laporan.md, bukan di SQL)
+-- Q16: REFLEKTIF 
 -- ============================================================
 -- Pertanyaan:
 --   Mengapa Heap Fetches berubah setelah VACUUM walaupun
