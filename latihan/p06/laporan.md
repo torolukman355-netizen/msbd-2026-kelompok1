@@ -107,4 +107,45 @@ c. Sisa Ruang Kosong Halaman (Free Space): Halaman PostgreSQL tidak terisi 100% 
 - Kasus 2: UPDATE Kolom Terindeks ('val')
   * Karena nilai kolom 'val' berubah dan kolom tersebut terikat pada index B-Tree (`idx_longgar_val`), PostgreSQL WAJIB membuat entri/key baru di dalam struktur B-Tree index. 
   * Karena entri index harus diperbarui untuk menunjuk ke posisi fisik tuple baru, mekanisme HOT chain tidak dapat digunakan. HOT Update GAGAL meskipun masih ada ruang kosong di halaman tersebut.
+
 ---
+
+### Q17 · GIN untuk JSONB
+
+Pastikan setup `q00_setup.sql` sudah dijalankan. Predicate yang diuji oleh `q17_gin_jsonb.sql` adalah `payload @> '{"promo": true}'`.
+
+- Index yang digunakan / node scan pada `EXPLAIN`: **isi dari hasil**
+- Execution Time dan Buffers: **isi dari hasil**
+- Ukuran heap: **isi dari hasil**
+- Ukuran GIN dan persentasenya terhadap heap: **isi dari hasil**
+- Analisis: apakah GIN dipakai oleh planner, dan apakah ukuran index sepadan untuk pola query ini?
+
+### Q18 · GIN untuk array `tags`
+
+Jalankan `q18_gin_array.sql`, lalu bandingkan kedua hasil `EXPLAIN (ANALYZE, BUFFERS)` untuk predicate `tags @> ARRAY['kanal:1', 'sumber:1']`.
+
+- Tanpa GIN: node scan, actual rows, Execution Time, dan Buffers **isi dari hasil**
+- Dengan GIN: node scan, actual rows, Execution Time, dan Buffers **isi dari hasil**
+- Kesimpulan: apakah planner memilih GIN? Jelaskan perubahan plan dan buffer. Jika tetap memilih Seq Scan, catat itu sebagai hasil planner untuk selectivity query ini.
+
+### Q19 · Korelasi waktu dan ukuran BRIN
+
+Jalankan `q19_brin_korelasi_ukuran.sql`.
+
+- `pg_stats.correlation` untuk `terjadi_pada`: **isi dari hasil**
+- Ukuran BRIN (`pages_per_range=128`): **isi dari hasil**
+- Ukuran B-Tree pada kolom yang sama: **isi dari hasil**
+- Analisis hubungan korelasi fisik heap dengan ukuran dan kecocokan BRIN: **isi jawaban**
+
+### Q20 · Rentang tujuh hari
+
+Jalankan `q20_rentang_7_hari.sql`. Untuk tiap index, eksekusi pertama memanaskan cache dan eksekusi kedua menjadi hasil yang dicatat.
+
+- BRIN: node scan, Execution Time, dan `Buffers` (`shared hit` / `shared read`): **isi dari hasil**
+- B-Tree: node scan, Execution Time, dan `Buffers` (`shared hit` / `shared read`): **isi dari hasil**
+- Pemenang untuk query ini: **isi dari hasil**
+- Selisih total Buffers (`shared hit + shared read`): **isi dari hasil**
+
+### Q21 · Reflektif: penghematan ruang BRIN
+
+Penghematan ukuran BRIN sepadan ketika workload sering menjalankan rentang waktu yang kolomnya tersusun berkorelasi dengan urutan fisik heap, kebutuhan latensinya masih dipenuhi, dan biaya penyimpanan atau cache B-Tree menjadi penting. B-Tree lebih tepat jika pembacaan rentang harus sangat selektif atau latensi rendah lebih penting daripada ukuran index. Keputusan sebaiknya memakai frekuensi query, selisih waktu dan Buffers terukur, ruang yang dihemat, serta biaya pemeliharaan index saat data ditulis. Isi kesimpulan akhir berdasarkan hasil Q19–Q20, bukan hanya ukuran index.
