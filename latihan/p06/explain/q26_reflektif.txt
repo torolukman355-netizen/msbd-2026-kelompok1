@@ -1,0 +1,6 @@
+Q26 · Reflektif
+Pilih satu status untuk index dan satu untuk Seq Scan; jelaskan mengapa titik peralihannya bukan angka tetap.
+
+Status SUKSES dipilih untuk Index Scan karena jumlah baris yang memenuhi kondisi relatif sedikit, sehingga penggunaan index lebih efisien daripada membaca seluruh tabel. Sementara itu, status GAGAL dipilih untuk Seq Scan karena jumlah baris yang memenuhi kondisi lebih banyak, sehingga membaca tabel secara berurutan lebih efisien.
+
+Titik peralihan antara Index Scan dan Seq Scan bukan angka yang tetap karena dipengaruhi oleh selektivitas data, ukuran tabel, statistik PostgreSQL, nilai `random_page_cost` dan `seq_page_cost`, serta kondisi cache atau buffer. Oleh karena itu, perubahan distribusi data maupun parameter biaya dapat menyebabkan optimizer memilih metode scan yang berbeda pada fraksi data yang berbeda.
