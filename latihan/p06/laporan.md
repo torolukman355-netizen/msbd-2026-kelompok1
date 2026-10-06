@@ -356,7 +356,7 @@ Bantuan AI digunakan secara terukur sebagai rekan diskusi untuk mengurai konsep 
 Seluruh argumen dan hipotesis AI tidak digunakan mentah-mentah, melainkan **telah diverifikasi secara empiris** dengan menjalankan perintah `EXPLAIN (ANALYZE, BUFFERS)` serta pengukuran ruang disk secara langsung di dalam lingkungan Docker PostgreSQL lokal.
 
 ## TAUTAN MERGE REQUEST ##
-
+'[https://github.com/torolukman355-netizen/msbd-2026-kelompok1/pull/1]'
 
 ## CHECKLIST AKHIR ##
 - [x] Tabel event_log dan dua juta baris terverifikasi.
