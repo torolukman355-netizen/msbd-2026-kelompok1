@@ -227,3 +227,24 @@ Berdasarkan bukti keluaran pada Q1 dan Q2, "mencabut hak" dengan perintah `REVOK
 2. **Hak destruktif melekat pada kepemilikan dan tidak bisa di-`REVOKE`:** Pada Q2, upaya mencabut `DROP` menghasilkan galat `unrecognized privilege type "drop"`, yang membuktikan bahwa wewenang `DROP` dan `ALTER` merupakan hak bawaan pemilik tabel yang tidak dapat dibatasi lewat ACL.
 
 **Jalan keluar untuk K1** adalah menerapkan **pemisahan peran tiga lapis** berbasis prinsip hak minimum (*Principle of Least Privilege*): menjadikan `skema_owner` sebagai peran `NOLOGIN` khusus kepemilikan objek, membundel hak akses ke dalam peran fungsional (`app_read` dan `app_write` yang juga `NOLOGIN`), serta menghubungkan aplikasi melalui akun `LOGIN` terpisah (`app_portal` dan `app_laporan`) yang hanya meminjam hak DML seperlunya tanpa kepemilikan tabel.
+
+
+# Reflektif C — Analisis Empat Lapis Pertahanan SQL Injection
+
+Parameterized query merupakan mekanisme utama yang menghilangkan penyebab SQL Injection karena memisahkan struktur perintah SQL dengan input pengguna. Dengan mekanisme ini, input diperlakukan sebagai data, bukan sebagai bagian dari sintaks SQL.
+
+Tiga mekanisme pertahanan lainnya memiliki fungsi sebagai berikut:
+
+1. **Allowlist**
+
+   Membatasi identifier SQL, seperti nama kolom dan arah pengurutan, hanya pada nilai yang telah diizinkan sehingga input yang tidak dikenal akan ditolak.
+
+2. **Least Privilege dan Row-Level Security (RLS)**
+
+   Membatasi hak akses serta cakupan data yang dapat diakses oleh akun aplikasi. Hal ini dibuktikan pada Q14, ketika akun `app_laporan` tetap dibatasi oleh kebijakan RLS meskipun query diuji menggunakan payload SQL Injection.
+
+3. **Statement Timeout**
+
+   Membatasi durasi eksekusi query untuk mengurangi dampak query yang berjalan terlalu lama. Pada Q18, konfigurasi `statement_timeout = '5s'` menyebabkan query yang melebihi lima detik dibatalkan oleh PostgreSQL dengan SQLSTATE `57014` (*query_canceled*).
+
+Dengan demikian, parameterized query mengatasi penyebab utama SQL Injection, sedangkan allowlist, Least Privilege dan RLS, serta Statement Timeout berfungsi membatasi kemungkinan penyalahgunaan dan mengurangi dampak ketika kerentanan masih terjadi.

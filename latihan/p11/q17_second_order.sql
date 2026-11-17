@@ -1,0 +1,31 @@
+-- =========================================================
+-- Q17: SECOND-ORDER SQL INJECTION
+-- =========================================================
+-- Buat fungsi laporan_kota_rentan dan laporan_kota_aman
+-- menggunakan definisi yang tersedia dalam modul praktikum.
+--
+-- Pengujian dilakukan dengan menyimpan satu nilai status
+-- berbahaya melalui perintah INSERT yang menggunakan parameter
+-- pada aplikasi Python.
+--
+-- Setelah nilai tersimpan, panggil kedua fungsi laporan:
+--
+-- SELECT * FROM laporan_kota_rentan;
+-- SELECT * FROM laporan_kota_aman;
+--
+-- Analisis:
+-- Second-Order SQL Injection terjadi ketika input pengguna
+-- disimpan terlebih dahulu ke database, kemudian digunakan
+-- kembali dalam query yang disusun secara tidak aman.
+--
+-- INSERT yang menggunakan parameterized query tidak otomatis
+-- menjamin keamanan query pada proses berikutnya.
+--
+-- Fungsi laporan_kota_rentan berisiko karena menggunakan
+-- data tersimpan untuk menyusun perintah SQL secara langsung.
+--
+-- Fungsi laporan_kota_aman harus menggunakan parameterized
+-- query agar data tersimpan tetap diperlakukan sebagai nilai,
+-- bukan sebagai sintaks SQL.
+--
+-- Bandingkan hasil kedua fungsi dan catat keluaran aktual.
