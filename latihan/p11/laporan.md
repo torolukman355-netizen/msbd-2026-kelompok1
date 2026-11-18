@@ -1,250 +1,206 @@
-# Laporan Latihan Kelompok Pertemuan 11
-**Menutup Pintu yang Terbuka: Peran Berlapis, Row-Level Security, Query Berparameter, Enkripsi, Penyamaran, Audit, dan UU PDP**
+# Laporan Latihan Kelompok 1 Pertemuan 11
 
-## Anggota dan Kontribusi
-| Nama | NIM | Kontribusi | Commit |
-|---|---|---|---|
-| Rumaisha Raghib Syahidah Siregar | 251402034 | Langkah 1 dan Langkah 2 | langkah 1 dan 2 |
-| *(Anggota 2)* | *(NIM)* | *(Bagian)* | *(Commit)* |
-| *(Anggota 3)* | *(NIM)* | *(Bagian)* | *(Commit)* |
+## Q1–Q30: Perintah, Keluaran, dan Alasan Keputusan
 
----
+### Langkah 1: Setup
+**Q0: Verifikasi Skema lab11**
+- `tenant`: 3
+- `pelanggan`: 30000
+- `akun`: 4
+- `transaksi`: 120000
+- **Distribusi Pelanggan:** Tiap tenant (tenant 1, 2, dan 3) terdistribusi merata dengan masing-masing berjumlah tepat 10000 baris.
 
-## Q0–Q30: Perintah, Keluaran Nyata, dan Alasan Keputusan
+### Langkah 2: Kepemilikan, GRANT, dan Peran Berlapis
+**Q1: Hak Pemilik (q01_hak_pemilik.sql)**
+- **Hasil:** Saat hak `UPDATE` dicabut, `skema_owner` ditolak saat mencoba mengubah data (*Permission denied*). Namun, `skema_owner` dapat menjalankan `GRANT UPDATE` kembali kepada dirinya sendiri dan akhirnya berhasil melakukan *update*.
+- **Alasan:** Pemilik tabel (*owner*) memiliki hak istimewa absolut untuk mengelola izin (GRANT/REVOKE) pada objek miliknya. Meskipun hak DML-nya dicabut, ia selalu bisa memberikannya kembali.
 
-### Langkah 1 · Setup Klaster Tertutup dan Skema `lab11` (`q00_setup.sql`)
-- **Peran yang menjalankan:** `postgres` (superuser)
-- **Alasan keputusan:** Menjalankan kontainer PostgreSQL 17 dan kontainer aplikasi di dalam jaringan Docker dengan mode `internal: true` (`lab11_labnet`) untuk menjamin seluruh simulasi keamanan berlangsung terisolasi dari internet publik, serta memverifikasi jumlah baris keempat tabel utama agar seluruh pengujian berikutnya memiliki acuan data yang deterministik.
-- **Perintah verifikasi versi basis data & isolasi jaringan:**
-  ```bash
-  docker exec -it lab11-db psql -U postgres -d msbd -c "SELECT version();"
-  docker network inspect lab11_labnet --format '{{.Internal}}'
-  ```
-- **Keluaran nyata versi & isolasi jaringan:**
-  ```text
-                                                         version                                                        
-  ----------------------------------------------------------------------------------------------------------------------
-   PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
-  (1 row)
+**Q2: Drop Bukan Hak (q02_drop_bukan_hak.sql)**
+- **Keluaran/Galat:** `WARNING: no privileges could be revoked for "akun"`
+- **Alasan:** Hak operasi DDL seperti `DROP` dan `ALTER` bukanlah hak *privilege* biasa (seperti SELECT/UPDATE) yang dikelola melalui tabel ACL (Access Control List). Hak ini melekat secara permanen pada status "Kepemilikan", sehingga tidak bisa dicabut menggunakan perintah `REVOKE`.
 
-  true
-  ```
-- **Perintah verifikasi jumlah baris (`q00_setup.sql`):**
-  ```sql
-  SELECT (SELECT count(*) FROM lab11.tenant)     AS tenant,
-         (SELECT count(*) FROM lab11.pelanggan)  AS pelanggan,
-         (SELECT count(*) FROM lab11.akun)       AS akun,
-         (SELECT count(*) FROM lab11.transaksi)  AS transaksi;
+**Q3: Default Privileges (q03_default_privileges.sql)**
+- **Keluaran:** `via_postgres: f` (False)
+- **Alasan:** Tabel yang dibuat oleh `skema_owner` otomatis bisa dibaca oleh aplikasi karena modul latihan telah menjalankan `ALTER DEFAULT PRIVILEGES FOR ROLE skema_owner ...`. Tabel yang dibuat oleh peran lain (seperti `postgres`) tidak mewarisi aturan tersebut, sehingga peran aplikasi tidak otomatis mendapat hak baca.
 
-  SELECT tenant_id, count(*) AS jumlah_pelanggan
-  FROM lab11.pelanggan
-  GROUP BY 1
-  ORDER BY 1;
-  ```
-- **Keluaran nyata jumlah baris & distribusi per penyewa:**
-  ```text
-   tenant | pelanggan | akun | transaksi 
-  --------+-----------+------+-----------
-        3 |     30000 |    4 |    120000
-  (1 row)
+**Q4: Grant Option (q04_grant_option.sql)**
+- **Keluaran Pencabutan:** Jika dicabut tanpa `CASCADE`, PostgreSQL memunculkan pesan galat `dependent privileges exist`. Setelah menggunakan `CASCADE`, hak baca untuk `app_analitik` menjadi `f` (False), sedangkan hak baca `app_write` tetap `t` (True).
+- **Alasan:** Opsi `CASCADE` membatalkan hak turunan yang diteruskan oleh `app_write` kepada `app_analitik`. Perintah tersebut hanya mencabut "hak untuk meneruskan hak" (`GRANT OPTION`), bukan mencabut hak `SELECT` milik `app_write` itu sendiri.
 
-   tenant_id | jumlah_pelanggan 
-  -----------+------------------
-           1 |            10000
-           2 |            10000
-           3 |            10000
-  (3 rows)
-  ```
-- **Ringkasan verifikasi:** Seluruh data awal termuat lengkap sesuai baseline (`3` penyewa, `30.000` pelanggan yang terdistribusi merata masing-masing `10.000` baris per `tenant_id`, `4` akun, dan `120.000` transaksi), dengan status jaringan internal `true`.
+**Q5: Tabel Peran (q05_tabel_peran.sql)**
+1. `skema_owner`: Pemilik struktur dan objek (Tidak login)
+2. `app_read`: Hanya bisa membaca data (`SELECT`) (Bisa login)
+3. `app_write`: Membaca dan menulis data (Bisa login)
+4. `app_portal`: Akses operasional aplikasi tenant (Bisa login)
+5. `app_laporan`: Baca terbatas untuk pembuatan laporan (Bisa login)
+6. `app_analitik`: Akses tampilan data tersamar / anonim (Bisa login)
+7. `admin_audit`: Akses menulis log jejak audit (Bisa login)
+- **Alasan aplikasi tidak pernah login sebagai pemilik:** Untuk mematuhi prinsip "Hak Istimewa Minimum" (*Least Privilege*). Jika kredensial aplikasi bocor atau diretas, penyerang tidak akan bisa menjatuhkan struktur tabel (DROP), mengubah arsitektur, atau menghapus sistem audit karena akun aplikasi tidak memiliki izin tersebut.
 
-### Langkah 2 · Kepemilikan, GRANT, dan Peran Berlapis (`Q1–Q5`)
+### Langkah 3: Row-Level Security Multi-penyewa
 
-#### Q1 · Hak yang Melekat pada Pemilik (`q01_hak_pemilik.sql`)
-- **Peran yang menjalankan:** `postgres` (superuser) dan `skema_owner` (pemilik tabel)
-- **Alasan keputusan:** Mencabut hak `UPDATE` dari `skema_owner` melalui superuser lalu menguji eksekusi `UPDATE` sebelum dan sesudah `skema_owner` memberikan kembali hak tersebut kepada dirinya sendiri untuk membuktikan bahwa `REVOKE` hanya menghapus entri ACL, bukan status kepemilikan objek.
-- **Perintah yang dijalankan:**
-  ```sql
-  REVOKE UPDATE ON lab11.pelanggan FROM skema_owner;
+**Q6: Default Deny (q06_default_deny.sql)**
+- **Hasil:** `sebelum_ada_kebijakan: 0`
+- **Alasan & Penjelasan Keamanan:** Ketika RLS diaktifkan pada tabel menggunakan `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` tanpa adanya kebijakan (*policy*) yang dibuat, PostgreSQL secara bawaan menerapkan prinsip *default-deny* (tertutup penuh). Setiap kueri dari peran non-owner/non-superuser akan mengembalikan 0 baris (*empty set*). Perilaku ini sangat aman (*fail-closed*) karena mencegah kebocoran data jika terjadi kelalaian atau kegagalan konfigurasi kebijakan keamanan.
 
-  SET ROLE skema_owner;
-  BEGIN;
-  UPDATE lab11.pelanggan SET kota = kota WHERE id = 3;
-  ROLLBACK;
+**Q7: Kebijakan Penyewa (q07_kebijakan_penyewa.sql)**
+- **Hasil:** Kebijakan `p_tenant_baca` dan `p_tenant_tulis` berhasil dibuat pada tabel `lab11.pelanggan`.
+- **Alasan Pemilihan `nullif(..., '')`:** Sintaks `nullif(current_setting('app.tenant', true), '')::int` digunakan untuk mencegah galat tipe data pada PostgreSQL 17 (`invalid input syntax for type integer: ""`). Jika variabel `app.tenant` pernah disetel dan kemudian di-reset menjadi string kosong `''`, pemanggilan `::int` langsung akan memicu kegagalan runtime. Dengan `nullif`, nilai kosong diubah menjadi `NULL`, sehingga ekspresi perbandingan menghasilkan `NULL` (dinilai false oleh RLS) dan mengembalikan 0 baris secara aman tanpa galat.
 
-  GRANT UPDATE ON lab11.pelanggan TO skema_owner;
+**Q8: Uji Positif dan Negatif (q08_uji_positif_negatif.sql)**
+- **Hasil:**
+  - `terlihat_tenant1`: `10000` (Uji positif: seluruh data milik tenant 1 terlihat lengkap).
+  - `harus_nol`: `0` (Uji negatif: data penyewa 2 tidak dapat diakses meskipun kueri meminta secara eksplisit `WHERE tenant_id = 2`).
+- **Alasan & Penjelasan:** RLS secara otomatis menggabungkan predikat filter keamanan ke dalam kueri pengguna (`WHERE (tenant_id = 2) AND (tenant_id = 1)`). Karena kedua kondisi bertolak belakang, kueri mengevaluasi hasil menjadi kosong (0 baris), membuktikan integritas isolasi multi-tenant.
 
-  BEGIN;
-  UPDATE lab11.pelanggan SET kota = kota WHERE id = 3;
-  ROLLBACK;
-  RESET ROLE;
-  ```
-- **Keluaran nyata:**
-  ```text
-  REVOKE
-  SET
-  BEGIN
-  ERROR:  permission denied for table pelanggan
-  ROLLBACK
-  GRANT
-  BEGIN
-  UPDATE 1
-  ROLLBACK
-  RESET
-  ```
-- **Analisis:** Pada percobaan pertama, `UPDATE` ditolak dengan galat `permission denied for table pelanggan` karena entri `UPDATE` telah dihapus dari daftar ACL tabel. Namun, pada percobaan kedua, `skema_owner` berhasil menjalankan `GRANT UPDATE ON lab11.pelanggan TO skema_owner` dan memulihkan aksesnya sendiri (`UPDATE 1`). Hal ini terjadi karena di PostgreSQL status kepemilikan (*ownership*) tetap melekat pada peran pemilik objek (`tableowner`), sehingga pemilik selalu memegang wewenang mutlak untuk mengatur ulang hak akses atas tabel miliknya kapan saja.
+**Q9: Force dan Bypass (q09_force_dan_bypass.sql)**
+- **Hasil:**
+  - `owner_sebelum_force`: `30000` baris (pemilik tabel secara default kebal/bebas dari RLS).
+  - `owner_sesudah_force`: `0` baris (setelah `FORCE ROW LEVEL SECURITY`, pemilik tabel dipaksa tunduk pada RLS; karena belum ada kebijakan untuk owner, berlaku default-deny).
+  - `analitik_dengan_read_all_data`: `0` baris (peran bawaan `pg_read_all_data` tidak membypass RLS).
+  - `analitik_dengan_bypassrls`: `30000` baris (peran dengan atribut `BYPASSRLS` menembus seluruh batasan isolasi RLS).
+- **Pelajaran tentang `pg_read_all_data`:** Peran `pg_read_all_data` hanya memberikan hak akses baca vertikal (setingkat tabel), tetapi **TIDAK** memberikan izin untuk menembus aturan keamanan baris (horizontal). Batas horizontal RLS tetap tegak dan hanya dapat dilewati oleh atribut khusus `BYPASSRLS` atau peran `SUPERUSER`.
 
----
+**Q10: Kolam Koneksi (q10_kolam_koneksi.sql)**
+- **Penyebab Kebocoran:** Pada kolam koneksi (*connection pooling* seperti PgBouncer atau HikariCP), koneksi TCP fisik dipakai bergantian oleh banyak permintaan. Jika penyetelan tenant dilakukan di tingkat sesi (`SET app.tenant = '1'`), variabel ini akan menetap di sesi tersebut. Jika permintaan berikutnya tidak menyetel tenant, kueri akan berjalan di bawah konteks penyewa sebelumnya sehingga terjadi kebocoran data.
+- **Pola Pencegahan:** Gunakan `SET LOCAL app.tenant = '1';` di dalam blok transaksi (`BEGIN ... COMMIT;`) atau fungsi `set_config('app.tenant', '1', true);` dengan parameter `is_local = true`. Dengan pola ini, konteks tenant otomatis dibersihkan saat transaksi berakhir (*commit* maupun *rollback*), sehingga koneksi yang kembali ke kolam berada dalam status netral/bersih.
 
-#### Q2 · `DROP` Bukan Hak Akses Biasa (`q02_drop_bukan_hak.sql`)
-- **Peran yang menjalankan:** `postgres` (superuser)
-- **Alasan keputusan:** Menjalankan `REVOKE DROP ON lab11.akun FROM skema_owner` secara langsung untuk membuktikan bahwa perintah struktural seperti `DROP` tidak dikelola sebagai tipe *privilege* di dalam sistem ACL PostgreSQL.
-- **Perintah yang dijalankan:**
-  ```sql
-  REVOKE DROP ON lab11.akun FROM skema_owner;
-  ```
-- **Keluaran nyata (kutipan galat):**
-  ```text
-  ERROR:  unrecognized privilege type "drop"
-  ```
-- **Analisis (Perbedaan Hak Biasa vs Hak Kepemilikan):**
-  - **Hak Biasa (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`):** Merupakan *access privileges* standar yang disimpan di daftar ACL objek dan dapat diberikan atau dicabut secara fleksibel menggunakan perintah `GRANT` dan `REVOKE`.
-  - **Hak yang Melekat pada Kepemilikan (`DROP`, `ALTER`, `GRANT`/`REVOKE` atas objek tersebut):** Bukan merupakan jenis *privilege* dalam ACL (sehingga ditolak dengan pesan `unrecognized privilege type "drop"`), melainkan otoritas bawaan yang melekat eksklusif pada pemilik objek (`tableowner`) atau `superuser`. Satu-satunya cara mencabut kemampuan ini adalah memindahkan kepemilikan objek melalui `ALTER TABLE ... OWNER TO`.
+**Q11: Tiga Celah Isolasi (q11_tiga_celah.sql)**
+1. **Celah 1 (Superuser / BYPASSRLS):**
+   - *Penyebab:* Aplikasi terkoneksi sebagai superuser atau peran berstatus BYPASSRLS sehingga mengabaikan RLS.
+   - *Perbaikan:* Terapkan prinsip hak minimum dengan memastikan peran aplikasi tidak memiliki atribut superuser maupun BYPASSRLS.
+   - *Bukti Nyata:* Saat `app_analitik` diberi atribut `BYPASSRLS`, kueri mengembalikan `30000` baris (seluruh data semua penyewa bocor), padahal tanpa atribut tersebut mengembalikan `0` baris.
+2. **Celah 2 (Kebocoran Sesi pada Kolam Koneksi):**
+   - *Penyebab:* Konteks `app.tenant` disetel tanpa `LOCAL` dan tertinggal di sesi kolam koneksi.
+   - *Perbaikan:* Wajib menyetel konteks penyewa menggunakan transaksi lokal `SET LOCAL` atau `set_config(..., true)`.
+3. **Celah 3 (Tabel Relasi / Anak dan View yang Tidak Dilindungi RLS):**
+   - *Penyebab:* Tabel anak (seperti `transaksi`) atau View tidak dipasangi RLS sehingga data penyewa lain dapat diintip lewat relasi atau fungsi bocor (*leaky functions*).
+   - *Perbaikan:* Wajib aktifkan RLS pada seluruh tabel relasi yang memuat referensi tenant serta pasang opsi `WITH (security_barrier = true)` pada seluruh View.
 
----
+### Langkah 4 — Menutup celah injeksi SQL
 
-#### Q3 · Pengaruh Pembuat Objek pada `ALTER DEFAULT PRIVILEGES` (`q03_default_privileges.sql`)
-- **Peran yang menjalankan:** `postgres` (superuser)
-- **Alasan keputusan:** Membuat tabel sementara `lab11.catatan_postgres` menggunakan peran `postgres` (bukan `skema_owner`) dan memeriksa izin `SELECT` peran `app_laporan` melalui `has_table_privilege` untuk membuktikan cakupan peran pada aturan *default privileges*.
-- **Perintah yang dijalankan:**
-  ```sql
-  CREATE TABLE lab11.catatan_postgres (id int);
-  SELECT has_table_privilege('app_laporan', 'lab11.catatan_postgres', 'SELECT') AS via_postgres;
-  DROP TABLE lab11.catatan_postgres;
-  ```
-- **Keluaran nyata:**
-  ```text
-  CREATE TABLE
-   via_postgres 
-  --------------
-   f
-  (1 row)
+Kontrol defensif Q12–Q18 diuji pada PostgreSQL 17 di kontainer sementara tanpa jaringan. Tabel sintetis memiliki tiga pelanggan penyewa 1 dan dua pelanggan penyewa 2. Angka dari data resmi modul dan hasil Python yang terhubung ke `lab11-web` masih perlu diisi setelah aset lab tersedia. Bukti Q13–Q15 dan Q17 mencakup kontrol defensif. Jumlah hasil eksekusi injeksi dan keluaran fungsi laporan rentan belum tersedia.
 
-  DROP TABLE
-  ```
-- **Analisis:** Nilai `via_postgres` bernilai `f` (*false*), yang berarti `app_laporan` tidak otomatis mendapatkan hak `SELECT` atas tabel yang dibuat oleh `postgres`. Di PostgreSQL, klausa `ALTER DEFAULT PRIVILEGES` terikat secara spesifik pada peran pembuat objek (`FOR ROLE ...`), bukan berlaku menyeluruh untuk semua pembuat di dalam skema. Saat inisialisasi skema, aturan default hanya dipasang untuk `skema_owner`. Agar tabel baru yang dibuat oleh `postgres` juga otomatis dapat dibaca oleh `app_laporan`, perintah yang seharusnya dijalankan adalah:
-  ```sql
-  ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA lab11
-      GRANT SELECT ON TABLES TO app_laporan;
-  ```
+**Q12 · Perilaku normal**
 
----
+```text
+Templat SQL: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE %s
+Parameter ILIKE: '%Pelanggan 12%'
+```
 
-#### Q4 · Pendelegasian Hak dengan `WITH GRANT OPTION` dan `CASCADE` (`q04_grant_option.sql`)
-- **Peran yang menjalankan:** `postgres` (superuser) dan `app_write`
-- **Alasan keputusan:** Memberikan hak `SELECT ... WITH GRANT OPTION` kepada `app_write`, meneruskannya ke `app_analitik`, lalu menguji pencabutan opsi delegasi tanpa `CASCADE` dan dengan `CASCADE` agar hak baca utama milik `app_write` tetap terjaga.
-- **Perintah yang dijalankan:**
-  ```sql
-  GRANT SELECT ON lab11.transaksi TO app_write WITH GRANT OPTION;
+`Pelanggan 12` berasal dari pengguna. Python menambahkan kedua tanda `%` sebagai bagian dari nilai pola. Kueri pembanding Q12 menghasilkan `jumlah_pembanding = 1` saat login sebagai `app_laporan` pada data sintetis. Modul mengharapkan `365` pada data resmi, sehingga angka itu masih perlu diverifikasi.
 
-  SET ROLE app_write;
-  GRANT SELECT ON lab11.transaksi TO app_analitik;
-  RESET ROLE;
+**Q13 · Penyebab perubahan hasil**
 
-  REVOKE GRANT OPTION FOR SELECT ON lab11.transaksi FROM app_write;
-  REVOKE GRANT OPTION FOR SELECT ON lab11.transaksi FROM app_write CASCADE;
+Dalam SQL yang dirangkai dari input, sisa pola bawaan ikut dievaluasi selama masih berada di luar komentar. `=` memperlakukan `%` sebagai karakter biasa dan pembanding dapat bernilai salah. Komentar SQL membuat sisa baris diabaikan. Jika predikat yang tersisa selalu benar, filter pencarian berhenti membatasi baris yang dapat dilihat peran. Kontrol SQL dengan ekspresi tetap memberi hasil `f` untuk `'a' = 'a%'` dan `t` untuk `'a' ILIKE 'a%'`.
 
-  SELECT has_table_privilege('app_analitik', 'lab11.transaksi', 'SELECT') AS analitik,
-         has_table_privilege('app_write', 'lab11.transaksi', 'SELECT')    AS app_write;
-  ```
-- **Keluaran nyata:**
-  ```text
-  GRANT
-  SET
-  GRANT
-  RESET
-  ERROR:  dependent privileges exist
-  HINT:  Use CASCADE to revoke them too.
-  REVOKE
-   analitik | app_write 
-  ----------+-----------
-   f        | t
-  (1 row)
-  ```
-- **Analisis:** Percobaan pencabutan tanpa `CASCADE` gagal dengan galat `ERROR: dependent privileges exist` karena masih ada hak turunan pada `app_analitik` yang diberikan oleh `app_write`. Setelah klausa `CASCADE` ditambahkan pada `REVOKE GRANT OPTION FOR SELECT ...`, PostgreSQL mencabut wewenang delegasi milik `app_write` sekaligus mencabut hak baca turunan pada `app_analitik` (`f`), sementara hak `SELECT` utama milik `app_write` tetap bertahan (`t`).
+**Q14 · Batas hak dan RLS**
 
----
+Pada login `app_laporan`, hasil uji menunjukkan `memakai_hak_baca = t`, `anggota_app_write = f`, `boleh_select = t`, `boleh_insert = f`, `boleh_update = f`, `boleh_delete = f`, dan `rls_berlaku = t`. Hitungan tanpa filter pencarian memberikan `semua_baris_terlihat = 3`, `baris_penyewa_1 = 3`, dan `baris_penyewa_lain = 0`. Hak minimum membatasi operasi pada tabel. RLS membatasi baris yang masih bisa dibaca saat filter aplikasi hilang. Angka pembanding untuk data modul mengikuti Q8 setelah kebijakan aktif, yakni 10.000 baris dalam penyewa 1 dan 0 di luar penyewa 1.
 
-#### Q5 · Pemetaan Tujuh Peran pada Skema `lab11` (`q05_tabel_peran.sql`)
-- **Peran yang menjalankan:** `postgres` (superuser)
-- **Alasan keputusan:** Mengeksekusi kueri terhadap katalog sistem `pg_roles` untuk memverifikasi atribut `rolcanlogin` dan `rolsuper` seluruh peran pada `lab11` secara aktual.
-- **Perintah yang dijalankan:**
-  ```sql
-  SELECT rolname AS nama_peran,
-         rolcanlogin AS dapat_login,
-         rolsuper AS superuser
-  FROM pg_roles
-  WHERE rolname IN (
-      'skema_owner', 'app_read', 'app_write',
-      'app_portal', 'app_laporan', 'app_analitik', 'app_migrasi'
-  )
-  ORDER BY rolcanlogin, rolname;
-  ```
-- **Keluaran nyata:**
-  ```text
-    nama_peran  | dapat_login | superuser 
-  --------------+-------------+-----------
-   app_read     | f           | f
-   app_write    | f           | f
-   skema_owner  | f           | f
-   app_analitik | t           | f
-   app_laporan  | t           | f
-   app_migrasi  | t           | f
-   app_portal   | t           | f
-  (7 rows)
-  ```
+**Q15 · Kueri berparameter**
 
-- **Tabel Pemetaan Tujuh Peran pada `lab11`:**
+`cari_aman` mengirim templat SQL ke Psycopg dengan placeholder `%s` dan memberikan pola nama melalui argumen parameter. Kontrol PostgreSQL `PREPARE` dengan `$1` mengembalikan `jumlah = 1` untuk `Pelanggan 12` dan `jumlah = 1` untuk `O'Neil` sebagai `app_laporan`. Uji pemanggilan Python memeriksa bahwa apostrof sampai utuh di argumen parameter. Filter karakter berisiko merusak nama yang sah. Parameterisasi menjaga struktur SQL sekaligus mempertahankan nilai masukan. Tanda `%` dan `_` tetap memiliki arti pola sesuai aturan `ILIKE`. [Dokumentasi parameter Psycopg](https://www.psycopg.org/psycopg3/docs/basic/params.html)
 
-| Nama Peran | Lapisan / Jenis Peran | Dapat Login (`LOGIN`)? | Hak & Tanggung Jawab Utama |
-| :--- | :--- | :---: | :--- |
-| **`skema_owner`** | Lapis 1 · Pemilik Objek (`NOLOGIN`) | Tidak (`f`) | Pemilik skema dan seluruh tabel di `lab11`; mengelola DDL (`CREATE`, `ALTER`, `DROP`) dan ACL objek. |
-| **`app_read`** | Lapis 2 · Peran Fungsional (`NOLOGIN`) | Tidak (`f`) | Peran grup (*role group*) yang membundel hak baca dasar (`SELECT`) pada tabel operasional. |
-| **`app_write`** | Lapis 2 · Peran Fungsional (`NOLOGIN`) | Tidak (`f`) | Peran grup (*role group*) yang membundel hak baca dan tulis (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) pada tabel operasional. |
-| **`app_portal`** | Lapis 3 · Peran Aplikasi (`LOGIN`) | **Ya (`t`)** | Akun koneksi aplikasi portal utama; mewarisi `app_write` untuk transaksi harian dan tunduk pada kebijakan RLS. |
-| **`app_laporan`** | Lapis 3 · Peran Aplikasi (`LOGIN`) | **Ya (`t`)** | Akun koneksi layanan pelaporan; mewarisi `app_read` (hanya baca) dan tunduk pada kebijakan RLS antar penyewa. |
-| **`app_analitik`** | Lapis 3 · Peran Analitik (`LOGIN`) | **Ya (`t`)** | Akun koneksi tim analis data; hanya diizinkan membaca tampilan tersamar (`v_pelanggan_samar`) tanpa akses ke data mentah. |
-| **`app_migrasi`** | Peran Operasional DDL (`LOGIN`) | **Ya (`t`)** | Akun khusus deployment/migrasi skema saat pemeliharaan sistem (`IN ROLE skema_owner`), terpisah dari trafik aplikasi harian. |
+**Q16 · Daftar putih pengurutan**
 
-- **Alasan aplikasi tidak pernah login sebagai pemilik (1 kalimat):** Aplikasi tidak pernah login sebagai pemilik (`skema_owner`) karena pemilik objek dapat memulihkan haknya sendiri setelah `REVOKE`, memiliki otoritas bawaan untuk menghapus atau mengubah struktur tabel (`DROP`/`ALTER`), serta secara bawaan melewati kebijakan Row-Level Security sehingga satu celah keamanan di aplikasi dapat merusak atau membocorkan seluruh basis data.
+Placeholder menangani nilai. Nama kolom membutuhkan pengenal SQL dan arah urut membutuhkan kata kunci. Kode memilih keduanya dari pemetaan tertutup, lalu menggunakan `sql.Identifier` untuk nama kolom. Uji Python menghasilkan:
 
----
+```text
+kota/turun  → Diterima: kota DESC (kode keluar 0)
+saldo/turun → Ditolak: parameter pengurutan tidak dikenal (kode keluar 2)
+kota/acak   → Ditolak: parameter pengurutan tidak dikenal (kode keluar 2)
+```
+
+**Q17 · Status tersimpan dan pemakaian kedua**
+
+Sebagai `app_laporan`, `INSERT` berparameter menyimpan `O'Neil` secara utuh di tabel sementara. `laporan_kota_aman(1)` mengembalikan `Medan | 1`, sedangkan ID status yang tidak ada mengembalikan `0 rows`. Transaksi diakhiri dengan `ROLLBACK`. Validasi di jalur masuk hanya melindungi operasi penyimpanan. Risiko muncul kembali jika program memakai nilai yang tersimpan sebagai bagian dari sintaks perintah berikutnya. Fungsi laporan menggunakan SQL tetap dan membandingkan status sebagai data dalam `JOIN`.
+
+**Q18 · Batas waktu dan bukti log**
+
+Perubahan dijalankan sebagai `postgres`. Login baru sebagai `app_portal` menunjukkan `statement_timeout = 5s`. Uji timeout dengan pernyataan tunggal pada kontainer sintetis menghasilkan `ERROR: 57014: canceling statement due to statement timeout`. Log server memuat pesan pembatalan dan entri `STATEMENT` untuk kueri yang dibatalkan. Jika pemanggilan `pg_sleep` membuat kueri melewati batas, pengulangan akan menambah entri galat. Cocokkan kode `57014` dengan pesan timeout karena pembatalan lain juga dapat memakai kode itu. [Dokumentasi batas waktu](https://www.postgresql.org/docs/17/runtime-config-client.html) · [Dokumentasi log](https://www.postgresql.org/docs/17/runtime-config-logging.html) · [Daftar SQLSTATE](https://www.postgresql.org/docs/17/errcodes-appendix.html)
+
+### Langkah 5: Enkripsi, Hashing, dan Penyamaran
+
+**Status pengujian:** Skrip Q19–Q24 sudah disiapkan, tetapi belum dijalankan pada data resmi `lab11`. Bagian berikut menjelaskan cara kerja dan bukti yang harus dicatat. Hasil yang diharapkan bukan hasil pengujian.
+
+**Q19: Hash dan enkripsi**
+
+Kata sandi akun diolah dengan `crypt(..., gen_salt('bf', 8))` dan disimpan pada kolom `sandi_hash`. Nama kolom sandi sumber perlu diperiksa dari struktur `lab11.akun` sebelum menjalankan skrip. Dua hash dari sandi yang sama dibandingkan, kemudian diuji dengan sandi benar dan salah. Garam acak membuat sandi yang sama menghasilkan hash berbeda sehingga tabel hash siap pakai tidak langsung dapat digunakan untuk semua akun. Bcrypt tetap bisa diserang dengan tebakan, tetapi tiap tebakan membutuhkan biaya komputasi.
+
+Kolom sandi awal dipertahankan untuk kebutuhan percobaan. Karena itu, tahap ini belum dapat dianggap sebagai penyimpanan sandi yang aman untuk produksi.
+
+**Bukti belum diisi:** peran, jumlah akun terhash, dua hash, `hash_berbeda`, `sandi_benar`, dan `sandi_salah`.
+
+**Q20: Biaya kerja hashing**
+
+Setiap metode dijalankan 100 kali dengan kata sandi yang sama. Pengukuran memakai `clock_timestamp()` agar waktu yang diambil benar-benar bergerak selama transaksi. Untuk bcrypt, yang diukur adalah `crypt` bersama `gen_salt`, sebab `gen_salt` saja belum melakukan hashing kata sandi. Cost 10 diharapkan lebih lambat daripada cost 6. Sifat lambat ini membantu mempermahal tebakan massal, sedangkan MD5 dirancang cepat dan tidak sesuai untuk penyimpanan kata sandi. Waktu pengujian juga mencakup overhead loop.
+
+**Bukti belum diisi:** tabel waktu total dan rata-rata ketiga metode dari mesin pengujian.
+
+**Q21: Enkripsi rekening**
+
+Sebanyak 1000 rekening dengan `id <= 1000` dienkripsi memakai `pgp_sym_encrypt`. Kunci contoh disetel pada sesi, lalu dihapus dari pengaturan sesi setelah selesai. Skrip memeriksa jumlah data, membuka kembali satu ciphertext, dan membandingkan hasilnya dengan rekening awal. Dua enkripsi atas nilai dan kunci yang sama juga dibandingkan; hasilnya diharapkan berbeda karena proses PGP menggunakan keacakan.
+
+Kolom `rekening` asli masih ada sesuai bentuk percobaan. Jadi dump tabel ini masih memuat rekening dalam teks terang meskipun kolom `rekening_enc` sudah dibuat.
+
+**Bukti belum diisi:** jumlah rekening terenkripsi, satu hasil dekripsi, `cocok`, dan `ciphertext_sama`.
+
+**Q22: Tempat kunci bisa terlihat**
+
+Sesi A menyetel kunci contoh, lalu menjalankan enkripsi. Sesi B sebagai `postgres` mengamati `pg_stat_activity`. Pengamatan dilakukan dua kali: setelah `SET` ketika sesi A menunggu, dan ketika query enkripsi sedang aktif. Literal kunci dapat muncul pada teks perintah `SET`. Pada query yang merujuk `current_setting`, teks query tidak otomatis menampilkan nilai variabel atau rekening yang dibaca dari tabel. Kesimpulan akhir harus mengikuti keluaran pengamatan, bukan hanya dugaan dari kode.
+
+Dua tempat lain yang perlu diperiksa adalah log PostgreSQL dan riwayat perintah klien atau skrip aplikasi. Kunci contoh dalam skrip ini hanya untuk lab, bukan pola penyimpanan kunci produksi.
+
+**Bukti belum diisi:** `usename`, `state`, dan `query` dari kedua pengamatan sesi B.
+
+**Q23: Tampilan tersamar**
+
+View menyamarkan nama, NIK, surel, tanggal lahir, dan saldo. `app_analitik` diberi hak baca view, sementara hak baca langsung tabel dicabut. Hak `pg_read_all_data` dan atribut `BYPASSRLS` dari percobaan sebelumnya juga dibersihkan. Skrip memeriksa hak turunan supaya pencabutan langsung tidak memberi kesan aman yang keliru.
+
+View lab dibuat dengan pemilik `postgres`, tanpa `security_invoker`, agar dapat membaca data meskipun `skema_owner` sudah terkena FORCE RLS tanpa policy untuknya. Pilihan ini memungkinkan analis melihat data tersamar lintas penyewa; view ini tidak dimaksudkan sebagai isolasi per penyewa. Pengujian dilakukan setelah `SET ROLE app_analitik`: view harus bisa dibaca, sedangkan tabel asli harus menghasilkan galat izin, bukan hanya hasil kosong.
+
+**Bukti belum diisi:** peran aktif, lima baris view, jumlah baris view, dan galat akses langsung beserta SQLSTATE.
+
+**Q24: Identifikasi ulang**
+
+Kombinasi unik dihitung sebagai kelompok `(kota, lahir)` yang berisi tepat satu orang. Perhitungan diulang setelah tanggal lahir diganti tahun. Persentase penurunan dihitung dengan `(unik_sebelum - unik_sesudah) / unik_sebelum × 100%`. Jika tidak ada kombinasi unik sejak awal, persentase ditampilkan sebagai NULL.
+
+Untuk percobaan agregat, skrip memilih satu tanggal lahir yang hanya dimiliki satu pelanggan di suatu kota. Query pertama menghitung jumlah orang dan total saldo seluruh kota; query kedua menghitung kota yang sama tanpa tanggal tersebut. Jika selisih jumlah orang adalah satu, selisih total saldo mengungkap saldo orang itu. Generalisasi mengurangi keunikan, tetapi akses agregat yang saling bertumpang tindih masih dapat membocorkan informasi.
+
+**Bukti belum diisi:** jumlah unik sebelum/sesudah, persentase penurunan, target yang ditemukan, dua hasil agregat, dan selisihnya. Bila target tidak ditemukan, catat bahwa contoh tersebut belum dapat dibuktikan pada data yang tersedia.
+
+*(Q25–Q30 dilanjutkan oleh anggota berikutnya.)*
 
 ## Refleksi A–E
 
-### Refleksi A
-Berdasarkan bukti keluaran pada Q1 dan Q2, "mencabut hak" dengan perintah `REVOKE` bukan jalan keluar untuk keluhan **K1** (aplikasi login memakai akun pemilik tabel yang dapat menjalankan `DROP TABLE` secara tidak sengaja maupun akibat bug) karena dua alasan utama dari data percobaan:
-1. **Hak biasa dapat dipulihkan sendiri oleh pemilik:** Pada Q1, meskipun `UPDATE` dicabut dari `skema_owner` sehingga sempat memunculkan `permission denied`, peran `skema_owner` tetap dapat mengeksekusi `GRANT UPDATE ON lab11.pelanggan TO skema_owner` dan memulihkan aksesnya (`UPDATE 1`).
-2. **Hak destruktif melekat pada kepemilikan dan tidak bisa di-`REVOKE`:** Pada Q2, upaya mencabut `DROP` menghasilkan galat `unrecognized privilege type "drop"`, yang membuktikan bahwa wewenang `DROP` dan `ALTER` merupakan hak bawaan pemilik tabel yang tidak dapat dibatasi lewat ACL.
+**📝 Reflektif A (Langkah 2)**
+Mencabut hak (*revoke privilege*) bukan jalan keluar untuk keluhan keamanan antar penyewa. Seperti yang dibuktikan di Langkah 2, pengguna yang memiliki hak aplikasi seperti `app_write` masih bisa mengedit seluruh baris di tabel `pelanggan` karena tidak ada batasan horizontal. Jika penyerang mengeksploitasi aplikasi, mencabut hak tak berguna karena penyerang "berpura-pura" menjadi aplikasi yang sah. Jalan keluar yang tepat adalah menggunakan **Row-Level Security (RLS)**, sehingga basis data menolak akses ke baris penyewa lain meskipun kuerinya dijalankan oleh aplikasi dengan hak `UPDATE` yang sah.
 
-**Jalan keluar untuk K1** adalah menerapkan **pemisahan peran tiga lapis** berbasis prinsip hak minimum (*Principle of Least Privilege*): menjadikan `skema_owner` sebagai peran `NOLOGIN` khusus kepemilikan objek, membundel hak akses ke dalam peran fungsional (`app_read` dan `app_write` yang juga `NOLOGIN`), serta menghubungkan aplikasi melalui akun `LOGIN` terpisah (`app_portal` dan `app_laporan`) yang hanya meminjam hak DML seperlunya tanpa kepemilikan tabel.
+**📝 Reflektif B (Langkah 3)**
+**Apakah penyaring `WHERE tenant_id` di aplikasi masih perlu ditulis padahal RLS sudah aktif?**
+**Ya, tetap sangat perlu ditulis.** Keduanya mengemban tugas fundamental yang berbeda:
+1. **RLS bertugas sebagai Garis Pertahanan Keamanan (Security Barrier):**
+   RLS adalah jaring pengaman tingkat basis data (*defense-in-depth*). RLS menjamin bahwa meskipun terjadi bug di kode aplikasi, kelalaian developer lupa menuliskan filter, atau celah logika, basis data secara mutlak menolak membocorkan baris milik penyewa lain (*fail-safe security*).
+2. **Penyaring `WHERE tenant_id` di aplikasi bertugas untuk Optimasi Kinerja & Rencana Eksekusi (Query Performance):**
+   Dari sisi rencana eksekusi (*query execution plan*), PostgreSQL Query Planner sangat bergantung pada predikat eksplisit untuk menentukan jalur akses tercepat:
+   - **Pemanfaatan Indeks:** Dengan menuliskan `WHERE tenant_id = $1` secara eksplisit, perencana kueri dapat langsung menggunakan indeks komposit `(tenant_id, ...)` pada kondisi indeks (*Index Cond*). Sebaliknya, jika hanya mengandalkan RLS, evaluasi fungsi dinamis `current_setting('app.tenant')` sering kali diperlakukan sebagai filter pasca-pembacaan baris (*Filter: ...*), yang berpotensi memicu *Sequential Scan* penuh pada tabel besar.
+   - **Partition Pruning:** Jika tabel dipartisi berdasarkan `tenant_id`, klausul `WHERE tenant_id = $1` memungkinkan *pruning* partisi dilakukan sejak tahap perencanaan kueri (*compile-time pruning*), sehingga PostgreSQL hanya membaca partisi milik penyewa tersebut dan mengabaikan partisi penyewa lain.
+- **Kesimpulan:** RLS menjamin **keamanan mutlak**, sedangkan klausul `WHERE` di aplikasi menjamin **efisiensi dan performa tinggi**.
 
+**Reflektif C (Langkah 4)**
 
-# Reflektif C — Analisis Empat Lapis Pertahanan SQL Injection
+Parameterisasi menghapus penyebab injeksi pada nilai dengan memisahkan templat dari data. Daftar putih mengendalikan bagian sintaks yang memang perlu dipilih, seperti nama kolom dan arah urut. Hak minimum dan RLS membatasi dampak di basis data. Pada Q14 `app_laporan` hanya punya `SELECT` dan tidak melihat baris di luar penyewa aktif. Batas waktu membatasi durasi pernyataan dan memberi sinyal di log, seperti pembatalan `57014` pada Q18.
 
-Parameterized query merupakan mekanisme utama yang menghilangkan penyebab SQL Injection karena memisahkan struktur perintah SQL dengan input pengguna. Dengan mekanisme ini, input diperlakukan sebagai data, bukan sebagai bagian dari sintaks SQL.
+**Reflektif D (Langkah 5)**
 
-Tiga mekanisme pertahanan lainnya memiliki fungsi sebagai berikut:
+Enkripsi kolom saja belum cukup. Pertama, pihak yang mempunyai kunci dan hak akses masih dapat membaca data; dekripsi pada Q21 serta pengamatan kunci pada Q22 menjadi pengujiannya. Kedua, informasi seseorang masih dapat disimpulkan dari data yang terlihat atau selisih agregat, seperti percobaan Q23–Q24. Risiko operasionalnya adalah kehilangan kunci: ciphertext tidak bisa dipulihkan tanpa kunci yang benar. Karena itu, akses dan cadangan kunci juga perlu dikelola. Bukti hasil untuk mendukung jawaban ini belum tersedia sampai Q21–Q24 dijalankan.
 
-1. **Allowlist**
+*(Refleksi E diisi oleh anggota berikutnya.)*
 
-   Membatasi identifier SQL, seperti nama kolom dan arah pengurutan, hanya pada nilai yang telah diizinkan sehingga input yang tidak dikenal akan ditolak.
+## Peta Tiket #1134 ke UU PDP
+| Keluhan | Pasal relevan | Kontrol teknis pencegah | Bukti |
+|---|---|---|---|
+| *(Dilengkapi Anggota 5 di Langkah 6)* | | | |
 
-2. **Least Privilege dan Row-Level Security (RLS)**
-
-   Membatasi hak akses serta cakupan data yang dapat diakses oleh akun aplikasi. Hal ini dibuktikan pada Q14, ketika akun `app_laporan` tetap dibatasi oleh kebijakan RLS meskipun query diuji menggunakan payload SQL Injection.
-
-3. **Statement Timeout**
-
-   Membatasi durasi eksekusi query untuk mengurangi dampak query yang berjalan terlalu lama. Pada Q18, konfigurasi `statement_timeout = '5s'` menyebabkan query yang melebihi lima detik dibatalkan oleh PostgreSQL dengan SQLSTATE `57014` (*query_canceled*).
-
-Dengan demikian, parameterized query mengatasi penyebab utama SQL Injection, sedangkan allowlist, Least Privilege dan RLS, serta Statement Timeout berfungsi membatasi kemungkinan penyalahgunaan dan mengurangi dampak ketika kerentanan masih terjadi.
+Rujukan teknis bagian ini: [pgcrypto PostgreSQL 17](https://www.postgresql.org/docs/17/pgcrypto.html), [CREATE VIEW](https://www.postgresql.org/docs/17/sql-createview.html), dan [pg_stat_activity](https://www.postgresql.org/docs/17/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW).
